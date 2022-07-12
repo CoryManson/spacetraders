@@ -1,10 +1,16 @@
 Import-Module $PSScriptRoot/Modules/spacetraders/spacetraders.psd1
 # Create Cache Folders
-New-Item -ItemType Directory -Path ./cache/marketplace -Force
+New-Item -ItemType Directory -Path $PSScriptRoot/cache/marketplace -Force
 
 # Register an Account
-$Username = -join ((65..90) + (97..122) | Get-Random -Count 5 | ForEach-Object { [char]$_ })
-$Token = New-AccessToken -Username $Username
+if ((Test-Path $PSScriptRoot/cache/token.json) -eq $false) {
+    $Username = -join ((65..90) + (97..122) | Get-Random -Count 5 | ForEach-Object { [char]$_ })
+    $Token = New-AccessToken -Username $Username
+    $Token | Out-File -FilePath $PSScriptRoot/cache/token.json
+}
+else {
+    $Token = Get-Content -Path $PSScriptRoot/cache/token.json
+}
 
 # Get Startup Loan
 Write-Host "Taking startup loan"
@@ -29,19 +35,19 @@ Get-Marketplace -Token $Token -Location $Ship.location | ConvertTo-Json | Out-Fi
 
 # Purchase Metals
 Write-Host "Purchasing metals"
-$PurchasePrice = (Get-Marketplace -Token $Token -Location $Ship.location | Where-Object {$_.symbol -eq "METALS"}).purchasePricePerUnit
-New-PurchaseOrder -Token $Token -ShipId $Ship.Id -Good "METALS" -Quantity ($ship.spaceAvailable -5)
+$PurchasePrice = (Get-Marketplace -Token $Token -Location $Ship.location | Where-Object { $_.symbol -eq "METALS" }).purchasePricePerUnit
+New-PurchaseOrder -Token $Token -ShipId $Ship.Id -Good "METALS" -Quantity ($ship.spaceAvailable - 5) # Not sure why I can't just purchase for all available ship space
 
 # Update Ship Info
 $Ship = Update-ShipInfo -Token $Token -ShipId $Ship.id
 
 # Get list of available locations in system
 Write-Host "Getting list of available locations"
-$Locations = Get-SystemLocation -Token $Token -Type "PLANET" | Where-Object {$_.symbol -ne $Ship.location}
+$Locations = Get-SystemLocation -Token $Token -Type "PLANET" | Where-Object { $_.symbol -ne $Ship.location }
 
 # Create flight plan to another planet with metals
 Write-Host "Creating flight plan"
-$Destination = $Locations | Where-object {$_.symbol -ne $Ship.location} | Where-Object {$_.traits -contains "METAL_ORES"} | Get-Random
+$Destination = $Locations | Where-object { $_.symbol -ne $Ship.location } | Where-Object { $_.traits -contains "METAL_ORES" } | Get-Random
 Write-Host "Destination is $($Destination.symbol)"
 $Flightplan = New-FlightPlan -Token $Token -ShipId $Ship.id -Destination $Destination.symbol
 
@@ -59,8 +65,8 @@ $Ship = Update-ShipInfo -Token $Token -ShipId $Ship.id
 Write-Host "Selling metals at location $($Ship.Location)"
 Get-Marketplace -Token $Token -Location $Ship.location | ConvertTo-Json | Out-File -Path ./cache/marketplace/$($Ship.Location).json -Force
 $CurrentMarketplace = Get-Content -Path ./cache/marketplace/$($Ship.Location).json | ConvertFrom-Json
-$Sellprice = ($CurrentMarketplace | Where-Object {$_.symbol -eq "METALS"}).sellPricePerUnit
+$Sellprice = ($CurrentMarketplace | Where-Object { $_.symbol -eq "METALS" }).sellPricePerUnit
 Write-Host "Purchase Price: $PurchasePrice Sell Price: $SellPrice"
 if ($SellPrice -gt $PurchasePrice) {
-    New-SellOrder -Token $Token -ShipId $Ship.id -Good METALS -Quantity ($ship.cargo | Where-Object {$_.good -eq "METALS"}).quantity
+    New-SellOrder -Token $Token -ShipId $Ship.id -Good METALS -Quantity ($ship.cargo | Where-Object { $_.good -eq "METALS" }).quantity
 }
