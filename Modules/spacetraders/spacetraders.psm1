@@ -83,7 +83,7 @@ function New-Loan($Token, $Type) {
     return $Response
 }
 
-function Get-ActiveLoans {
+function Get-ActiveLoans($Token) {
     $Response = (Invoke-API -Token $Token -Method GET -Endpoint "my/loans").loans
     return $Response
 }

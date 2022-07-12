@@ -13,8 +13,10 @@ else {
 }
 
 # Get Startup Loan
-Write-Host "Taking startup loan"
-New-Loan -Token $Token -Type STARTUP
+if ((Get-ActiveLoans -Token $Token).Status -ne "CURRENT") {
+    Write-Host "Taking startup loan"
+    New-Loan -Token $Token -Type STARTUP
+}
 
 # Purchase a JW-MK-I Ship
 Write-Host "Purchasing JW-MK-I ship"
