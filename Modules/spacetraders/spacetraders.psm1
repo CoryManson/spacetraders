@@ -38,10 +38,9 @@ function New-AccessToken {
         [String]
         $Username
     )
-    $Response = Invoke-API -Token $Token -Method "POST" -Endpoint "users/$Username/claim" 
+    $Response = (Invoke-API -Token $Token -Method "POST" -Endpoint "users/$Username/claim" ).token
     return $Response
 }
-Export-ModuleMember -Function New-AccessToken
 
 function Update-ShipInfo {
     param (
@@ -52,7 +51,8 @@ function Update-ShipInfo {
         [String]
         $ShipId
     )
-    $global:Ship = (Invoke-API -Token $Token -Method GET -Endpoint "my/ships/$Shipid").ship
+    $Response = (Invoke-API -Token $Token -Method GET -Endpoint "my/ships/$Shipid").ship
+    return $Response
 }
 
 function Get-ShipInfo {
@@ -112,7 +112,8 @@ function New-Ship() {
         $Type
     )
     $Response = Invoke-API -Token $Token -Method "POST" -Endpoint "my/ships?location=$Location&type=$Type"
-    Update-ShipInfo -ShipId $Response.ship.id
+    return $Response
+    # Update-ShipInfo -ShipId $Response.ship.id
 }
 
 function New-PurchaseOrder {
@@ -130,9 +131,11 @@ function New-PurchaseOrder {
         [String]
         $Quantity
     )
+
+    $Quantity = $Quantity.ToString()
     
     $Response = Invoke-API -Token $Token -Method "POST" -Endpoint "my/purchase-orders?shipId=$ShipId&good=$Good&quantity=$Quantity"
-    Update-ShipInfo -ShipId $Response.ship.id
+    # Update-ShipInfo -ShipId $Response.ship.id
     return $Response
 }
 
@@ -165,7 +168,7 @@ function Get-SystemLocation {
 }
 
 function Find-AvailableShip($Token) {
-    $Response = ((Invoke-API -Method GET -Endpoint "my/ships").ships | Where-Object { $null -eq $flightPlanId })[0]
+    $Response = (Invoke-API -Token $Token -Method GET -Endpoint "my/ships").ships
     return $Response
 }
 
@@ -182,8 +185,8 @@ function New-FlightPlan {
         $Destination
     )
 
-    $Response = (Invoke-API -Method POST -Endpoint "my/flight-plans?shipId=$ShipId&destination=$Destination").flightPlan
-    Update-ShipInfo -ShipId $Respose.shipId
+    $Response = (Invoke-API -Token $Token -Method POST -Endpoint "my/flight-plans?shipId=$ShipId&destination=$Destination").flightPlan
+    # Update-ShipInfo -ShipId $Respose.shipId
     return $Response
 }
 
@@ -197,7 +200,7 @@ function Get-FlightPlan {
         $FlightPlanId
     )
 
-    $Response = (Invoke-API -Method GET -Endpoint "my/flight-plans/$FlightPlanId").flightPlan
+    $Response = (Invoke-API -Token $Token -Method GET -Endpoint "my/flight-plans/$FlightPlanId").flightPlan
     return $Response
 }
 
@@ -217,8 +220,8 @@ function New-SellOrder {
         $Quantity
     )
 
-    $Response = Invoke-API -Method POST -Endpoint "my/sell-orders?shipId=$ShipId&good=$Good&quantity=$Quantity"
-    Update-ShipInfo -ShipId $ShipId
+    $Response = Invoke-API -Token $Token -Method POST -Endpoint "my/sell-orders?shipId=$ShipId&good=$Good&quantity=$Quantity"
+    # Update-ShipInfo -ShipId $ShipId
     return $Response
 }
 
@@ -232,6 +235,6 @@ function Get-CargoInformation {
         $ShipId
     )
 
-    $Response = (Invoke-API -Method GET -Endpoint "my/ships/$Shipid").ship.cargo
+    $Response = (Invoke-API -Token $Token -Method GET -Endpoint "my/ships/$Shipid").ship.cargo
     return $Response
 }
